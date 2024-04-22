@@ -1,0 +1,202 @@
+<html>
+
+
+<canvas id="gameCanvas" width="800" height = "600"></canvas>
+
+<script>
+    var canvas;
+    var canvasContext;
+    var ballX = 50;
+    var ballY = 50;
+    var ballSpeedX = 10;
+    var ballSpeedY = 4;
+
+    var player1Score = 0;
+    var player2Score = 0;
+    const WINNING_SCORE = 3;
+    var showingWinScreen = false;
+
+    var paddle1Y = 250;
+    var paddle2Y = 250;
+    const PADDLE_THICKNESS = 10;
+    const PADDLE_HEIGHT = 100;
+
+    //calcula la posicion de las barras de acuerdo a la posicion del mouse
+    function calculateMousePos(evt){
+        var rect = canvas.getBoundingClientRect();
+        var root = document.documentElement;
+        var mouseX = evt.clientX - rect.left - root.scrollLeft;
+        var mouseY = evt.clientY - rect.top - root.scrollTop;
+        return {
+            x: mouseX,
+            y: mouseY
+        };
+    }
+    //muestra el resultado de cada jugador
+    function handleMouseClick(evt) {
+        if(showingWinScreen){
+            player1Score = 0;
+            player2Score = 0;
+            showingWinScreen = false;
+        }
+    }
+     
+    //Carga la pantalla inicial
+    window.onload = function() {
+        
+        canvas = document.getElementById('gameCanvas');
+        canvasContext = canvas.getContext('2d');
+
+        var framesPerSecond = 30;
+
+        //Fija el intervalo entre la visualizacion de la pantalla y el inicio del movimiento
+        setInterval(function(){
+            moveEverything();
+            drawEverything();
+        }, 1000/framesPerSecond);
+        // Se ejecuta al hacer click con el mouse
+        canvas.addEventListener('mousedown',handleMouseClick);
+
+        canvas.addEventListener('mousemove',
+                //Calcula la posicion del mouse
+                function(evt){
+                        var mousePos = calculateMousePos(evt);
+                        paddle1Y = mousePos.y - (PADDLE_HEIGHT/2);
+        });
+     
+   
+    }
+
+    // El resultado vuelve a ser 0
+function ballReset() {
+        if(player1Score >= WINNING_SCORE ||
+           player2Score >= WINNING_SCORE){
+               
+                 showingWinScreen = true;
+           }
+        ballSpeedX = -ballSpeedX;
+        ballX = canvas.width/2;
+        ballY = canvas.height/2;
+}
+ //Ejecuta el movimiento de la barra del computador
+function computerMovement(){
+    var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT/2);
+
+    //Si la barra del jugador 2 esta por encima de la bola, se debe mover hacia abajo un poorcentaje
+    if(paddle2YCenter < ballY-35 ){
+        paddle2Y += 6;
+
+    //Si la barra del jugador 2 esta por encima de la bola, se debe mover hacia abajo un poorcentaje
+    } else if(paddle2YCenter > ballY+35 ){ 
+        paddle2Y -= 6;
+    }
+}
+// Maneja el movimiento de todo lo que se mueve en el juego: barras y bola
+function moveEverything() {
+        if(showingWinScreen == true) {
+            return;
+        }
+        //Aumenta la velocidad de la bola
+        computerMovement();
+        ballX += ballSpeedX;
+        ballY += ballSpeedY;
+
+        //Cuando la bola pasa el lado izquierdo
+        if (ballX < 0){
+            if(ballY > paddle1Y &&
+               ballY < paddle1Y+PADDLE_HEIGHT){
+                        ballSpeedX = -ballSpeedX;
+                        
+                        var deltaY = ballY
+                                -(paddle1Y+PADDLE_HEIGHT/2);
+                        ballSpeedY = deltaY * 0.35;
+
+                      }else {
+                        //El ordén si importa, el resultado debe incrementarse antes de el ballReset
+                            player2Score ++; 
+                            ballReset();
+                            
+                      }
+        }
+        //Cuando la bola pasa el lado derecho regua la velocidad
+        if (ballX > canvas.width){
+            if(ballY > paddle2Y &&
+               ballY < paddle2Y+PADDLE_HEIGHT){ 
+                        ballSpeedX = -ballSpeedX;
+                         var deltaY = ballY
+                                -(paddle2Y+PADDLE_HEIGHT/2);
+                        ballSpeedY = deltaY * 0.35;
+                      }else {
+                        //El ordén si importa, el resultado debe incrementarse antes de el ballReset
+                            player1Score ++; 
+                            ballReset();
+                            
+                      }
+        }
+        if (ballY < 0){
+                    ballSpeedY = -ballSpeedY;
+        }
+        if (ballY > canvas.height){
+                    ballSpeedY = -ballSpeedY;
+        }
+
+}
+ //Dibuja la net
+function drawNet() {
+        for (var i=0; i<canvas.height; i+=40){
+            colorRect(canvas.width/2-1,i,2,20,'white');
+        }
+}
+
+//Dibuja los rectangulos y la bola
+function drawEverything() {
+     //Fondo Negro configurado alancho del id = gameCanvas
+        colorRect(0,0,canvas.width,canvas.height,'black');
+
+        if(showingWinScreen){
+            canvasContext.fillStyle = 'white';
+            //Se ejecuta si gana el jugador1
+            if(player1Score >= WINNING_SCORE){ 
+            canvasContext.fillText("Left Player Won!",350,200);
+            //Se ejecuta si gana el jugador1
+            } else if(player2Score >= WINNING_SCORE){//se
+            canvasContext.fillText("Right Player Won!",350,200);
+            }
+            //Se ejecuta si se desea continuar en el juego
+            canvasContext.fillText("Click to Continue",350,500);
+            
+            return;
+        }
+
+        drawNet();
+
+        
+        //Configuracion de la barra blanca izquierda: posicion, dimensiones y color
+        colorRect(0,paddle1Y,PADDLE_THICKNESS, PADDLE_HEIGHT,'white');
+
+        //Configuracion de la barra blanca derecha: posicion, dimensiones y color
+        colorRect(canvas.width - PADDLE_THICKNESS,paddle2Y,PADDLE_THICKNESS,PADDLE_HEIGHT,'white');
+
+        //Configuracion del circulo blanco: posicion de inicio, movimiento, dimensiones y color
+        colorCircle(ballX, ballY, 10, 'white');
+
+        canvasContext.fillText(player1Score,100,100);
+        canvasContext.fillText(player2Score,canvas.width-100,100);
+}
+
+//Función para dibujar el circulo blanco
+function colorCircle(centerX, centerY, radius, drawColor){
+    canvasContext.fillStyle = drawColor;
+        canvasContext.beginPath();
+        canvasContext.arc(centerX, centerY, radius, 0, Math.PI*2),true;
+        canvasContext.fill();
+}
+//Función para dibujar las barras
+function colorRect(leftX, topY, width, height, drawColor){
+        canvasContext.fillStyle = drawColor;
+        canvasContext.fillRect(leftX, topY, width, height);
+}
+        
+</script>
+
+</html>
